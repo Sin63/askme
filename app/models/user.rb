@@ -1,50 +1,53 @@
+# (c) goodprogrammer.ru
+
 require 'openssl'
 
-class User < ApplicationRecord
-  # параметры работы модуля шифрования паролей
-  ITERATIONS = 20000
+# Модель пользователя.
+class User < ActiveRecord::Base
+  ITERATIONS = 20_000
   DIGEST = OpenSSL::Digest::SHA256.new
+
+  attr_accessor :password
 
   has_many :questions
 
   validates :email, :username, presence: true
   validates :email, :username, uniqueness: true
+  validates :password, presence: true, on: :create
 
-  attr_accessor :password
-
-  validates_presence_of :password, on: create
   validates_confirmation_of :password
 
   before_save :encrypt_password
 
   def encrypt_password
-    if self.password.present?
-      # создаем т. н. "соль" - рандомная строка усложняющая работу хакерам
+    if password.present?
       self.password_salt = User.hash_to_string(OpenSSL::Random.random_bytes(16))
 
-      # создаем хэш пароля - длинная уникальная строка, из которой 
-      # невозможно востановить исходный пароль
       self.password_hash = User.hash_to_string(
-        OpenSSL::PKCS5.pbkdf2_hmac(self.password, self.password_salt, ITERATIONS,DIGEST.length, DIGEST)
+        OpenSSL::PKCS5.pbkdf2_hmac(
+          password, password_salt, ITERATIONS, DIGEST.length, DIGEST
+        )
       )
+    end
   end
-end
 
-# служебный метод, преобразующий бинарную строку в 16-ричный формат, для удобства хранения
-def self.hash_to_string(password_hash)
-  password_hash.unpack('H*')[0]
-end
+  def self.hash_to_string(password_hash)
+    password_hash.unpack('H*')[0]
+  end
 
-def self.authenticate(email, password)
-  user = find_by(email: email) # находим кандидата по email
+  def self.authenticate(email, password)
+    user = find_by(email: email)
 
-  # Обратите вниминие: сравнивается password_hash, а оригинальный пароль
-  # никогда не сохраняется нигде
-  if user.present? && user.password_hash == User.hash_to_string(OpenSSL::PKCS5.pbkdf2_hmac(password, user.password_salt, ITERATIONS, DIGEST.length, DIGEST))
-    user
-  else
+    return nil unless user.present?
+
+    hashed_password = User.hash_to_string(
+      OpenSSL::PKCS5.pbkdf2_hmac(
+        password, user.password_salt, ITERATIONS, DIGEST.length, DIGEST
+      )
+    )
+
+    return user if user.password_hash == hashed_password
+
     nil
   end
-end
-
 end

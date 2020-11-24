@@ -1,5 +1,8 @@
-class Question < ApplicationRecord
+# (c) goodprogrammer.ru
+
+# Модель вопроса.
+class Question < ActiveRecord::Base
   belongs_to :user
- 
-   validates :text, :user, presence :true
+
+  validates :user, :text, presence: true
 end
