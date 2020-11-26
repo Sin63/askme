@@ -21,6 +21,8 @@ class UsersController < ApplicationController
 
     if @user.save
       redirect_to root_url, notice: 'Пользователь успешно зарегистрирован!'
+    else
+      render 'new'
     end
   end
 
@@ -30,26 +32,10 @@ class UsersController < ApplicationController
   # Это действие отзывается, когда пользователь заходит по адресу /users/:id,
   # например /users/1.
   def show
-    # Болванка пользователя
-    @user = User.new(
-      name: 'Vadim',
-      username: 'installero',
-      avatar_url: 'https://secure.gravatar.com/avatar/' \
-        '71269686e0f757ddb4f73614f43ae445?s=100'
-    )
+    @user User.find params[:id]
+    @questions = @user.questions.order(created_at: :desc)
 
-    # Болванка вопросов для пользователя
-    @questions = [
-      Question.new(text: 'Как дела?', created_at: Date.parse('27.03.2016')),
-      Question.new(
-        text: 'В чем смысл жизни?', created_at: Date.parse('27.03.2016')
-      )
-    ]
-
-    # Болванка для нового вопроса
-    @new_question = Question.new
-
-    # Обратите внимание, пока ни одна из болванок не достается из базы
+    @new_question = user.questions.build
   end
 
   private
